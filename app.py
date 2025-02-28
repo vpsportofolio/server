@@ -21,21 +21,21 @@ def get_data_from_api():
     return data
 
 
-def get_server_status(IP):
-    # Check whether the server is up or down
-    status = 0
-    try:
-        subprocess.run(
-            ["ping", "-n", "2", IP],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True,
-        )
-        status = 1
-    except subprocess.CalledProcessError:
-        status = 0
+# def get_server_status(IP):
+#     # Check whether the server is up or down
+#     status = 0
+#     try:
+#         subprocess.run(
+#             ["ping", "-n", "2", IP],
+#             stdout=subprocess.DEVNULL,
+#             stderr=subprocess.DEVNULL,
+#             check=True,
+#         )
+#         status = 1
+#     except subprocess.CalledProcessError:
+#         status = 0
 
-    return status
+#     return status
 
 
 # Dashboard title
@@ -49,14 +49,14 @@ while True:
     # Get the data from the API
     data = get_data_from_api()
 
-    # Ping each server to check if it is online or offline
-    for IP in data.keys():
-        data[IP]["status"] = "Online" if get_server_status(IP) else "Offline"
-        if data[IP]["status"] == "Offline":
-            message = f"⚠️ Server {data[IP]['name']} (`{IP}`) is offline!"
-            if message != previous_telegram_message:
-                send_telegram_message(message)
-                previous_telegram_message = message
+    # # Ping each server to check if it is online or offline
+    # for IP in data.keys():
+    #     data[IP]["status"] = "Online" if get_server_status(IP) else "Offline"
+    #     if data[IP]["status"] == "Offline":
+    #         message = f"⚠️ Server {data[IP]['name']} (`{IP}`) is offline!"
+    #         if message != previous_telegram_message:
+    #             send_telegram_message(message)
+    #             previous_telegram_message = message
 
     # Create a DataFrame from the data
     df = pd.DataFrame(data).T.reset_index()
@@ -76,6 +76,15 @@ while True:
     df = df[["IP", "Name", "Cpu Usage", "RAM Available", "Disk Free", "Status"]]
 
     df_offline = df[df["Status"] == "Offline"]
+
+    # If there are offline servers, send a Telegram message
+    if not df_offline.empty:
+        message = f"⚠️ The following servers are offline:\n\n"
+        for index, row in df_offline.iterrows():
+            message += f"• {row['Name']} (`{row['IP']}`)\n"
+        if message != previous_telegram_message:
+            send_telegram_message(message)
+            previous_telegram_message = message
 
     # Reset the index
     df_offline.reset_index(drop=True, inplace=True)
